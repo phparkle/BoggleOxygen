@@ -19,29 +19,29 @@ public class BoggleSolver {
         char[] letters = new char[rows * cols];
         for (int i = 0; i < rows; ++i)
             for (int j = 0; j < cols; ++j)
-                letters[i * rows + j] = board.getLetter(i, j);
+                letters[i * cols + j] = board.getLetter(i, j);
 
         int[] g = new int[rows * cols << 3];
         Arrays.fill(g, -1);
         for (int i = 0; i < rows; ++i) {
             for (int j = 0; j < cols; ++j) {
-                int k = i * rows + j << 3;
+                int k = i * cols + j << 3;
                 if (j + 1 < cols)
-                    g[k++] = i * rows + (j + 1);
+                    g[k++] = i * cols + (j + 1);
                 if (i + 1 < rows && j + 1 < cols)
-                    g[k++] = (i + 1) * rows + (j + 1);
+                    g[k++] = (i + 1) * cols + (j + 1);
                 if (i + 1 < rows)
-                    g[k++] = (i + 1) * rows + j;
+                    g[k++] = (i + 1) * cols + j;
                 if (i + 1 < rows && j - 1 >= 0)
-                    g[k++] = (i + 1) * rows + (j - 1);
+                    g[k++] = (i + 1) * cols + (j - 1);
                 if (j - 1 >= 0)
-                    g[k++] = i * rows + (j - 1);
+                    g[k++] = i * cols + (j - 1);
                 if (i - 1 >= 0 && j - 1 >= 0)
-                    g[k++] = (i - 1) * rows + (j - 1);
+                    g[k++] = (i - 1) * cols + (j - 1);
                 if (i - 1 >= 0)
-                    g[k++] = (i - 1) * rows + j;
+                    g[k++] = (i - 1) * cols + j;
                 if (i - 1 >= 0 && j + 1 < cols)
-                    g[k++] = (i - 1) * rows + (j + 1);
+                    g[k++] = (i - 1) * cols + (j + 1);
             }
         }
 
