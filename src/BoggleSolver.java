@@ -4,12 +4,13 @@ import java.util.TreeSet;
 
 public class BoggleSolver {
 
-    private final Dictionary dictionary;
+    private static final long PREFIX = 0b01;
+    private static final long KEY    = 0b10;
+
+    private final FlatTST tst;
 
     public BoggleSolver(String[] dictionary) {
-        this.dictionary = new Dictionary(Arrays.stream(dictionary)
-                                         .filter(word -> word.length() > 2)
-                                         .toArray(String[]::new));
+        tst = new FlatTST(dictionary, 0, dictionary.length, 0);
     }
 
     public Iterable<String> getAllValidWords(BoggleBoard board) {
@@ -50,35 +51,35 @@ public class BoggleSolver {
             boolean[] marked = new boolean[rows * cols];
             int[] adj = new int[rows * cols];
             IntStack path = new IntStack();
-            CharStack query = new CharStack();
+            CharStack prefix = new CharStack();
             marked[i] = true;
             path.push(i);
             if (letters[i] == 'Q')
-                query.push('U');
-            query.push(letters[i]);
+                prefix.push('U');
+            prefix.push(letters[i]);
             while (!path.isEmpty()) {
                 int v = path.peek();
                 if (adj[v] < 8 && g[(v << 3) + adj[v]] != -1) {
                     int w = g[(v << 3) + adj[v]++];
                     if (!marked[w]) {
                         if (letters[w] == 'Q')
-                            query.push('U');
-                        query.push(letters[w]);
-                        String word = dictionary.isReversePrefix(query);
-                        if (word != null) {
-                            if (!word.isEmpty())
-                                words.add(word);
+                            prefix.push('U');
+                        prefix.push(letters[w]);
+                        long query = tst.query(prefix, 0);
+                        if (query != 0) {
+                            if (query == (KEY | PREFIX))
+                                words.add(prefix.toString());
                             marked[w] = true;
                             path.push(w);
-                        } else if (query.pop() == 'Q') {
-                            query.pop();
+                        } else if (prefix.pop() == 'Q') {
+                            prefix.pop();
                         }
                     }
                 } else {
                     marked[v] = false;
                     adj[v] = 0;
-                    if (query.pop() == 'Q')
-                        query.pop();
+                    if (prefix.pop() == 'Q')
+                        prefix.pop();
                     path.pop();
                 }
             }
@@ -88,7 +89,7 @@ public class BoggleSolver {
 
     public int scoreOf(String word) {
         int length = word.length();
-        if (length > 2 && dictionary.contains(word)) {
+        if (length > 2 && tst.query(word, 0) == 3) {
             switch (length) {
             case 3:
             case 4:
