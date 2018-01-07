@@ -1,32 +1,38 @@
+import java.util.HashMap;
+import java.util.Map;
+
 import edu.princeton.cs.algs4.In;
 import edu.princeton.cs.algs4.Out;
 
 public class DictionaryAnalysis {
 
+    private static class Count {
+        public int nWords;
+        public int nLetters;
+    }
+
     public static void main(String[] args) {
-        In in = new In(args[0]);
-        boolean isPrefix = false;
-        int[] stems = new int[26 * 26 * 26];
-        while (in.hasNextLine()) {
-            String word = in.readLine();
-            if (word.length() >= 3) {
-                int a = 0;
-                for (int i = 0; i < 3; ++i) {
-                    a *= 26;
-                    a += word.charAt(isPrefix ? i : word.length() - 3 + i) - 'A';
+        // int R = Integer.parseInt(args[1]);
+        for (int R = 2; R < 6; ++R) {
+            In in = new In(args[0]);
+            Map<String, Count> counts = new HashMap<>();
+            while (in.hasNextLine()) {
+                String word = in.readLine();
+                if (word.length() > R) {
+                    String prefix = word.substring(0, R);
+                    Count count = counts.getOrDefault(prefix, new Count());
+                    ++count.nWords;
+                    count.nLetters += word.length() - R;
+                    counts.put(prefix, count);
                 }
-                ++stems[a];
             }
-        }
-        String format = isPrefix ? "%s_prefix.csv" : "%s_suffix.csv";
-        Out out = new Out(String.format(format, args[0]));
-        int i = 0;
-        for (char c0 = 'A'; c0 <= 'Z'; ++c0) {
-            for (char c1 = 'A'; c1 <= 'Z'; ++c1) {
-                for (char c2 = 'A'; c2 <= 'Z'; ++c2) {
-                    int freq = stems[i++];
-                    out.print(String.format("%c%c%c,%d\n", c0, c1, c2, freq));
-                }
+            String ext = String.format("_%d.csv", R);
+            Out out = new Out(args[0].replaceAll("\\.txt", ext));
+            for (Map.Entry<String, Count> entry : counts.entrySet()) {
+                String prefix = entry.getKey();
+                Count count = entry.getValue();
+                out.print(String.format("%s\t%d\t%d\n", prefix,
+                                        count.nWords, count.nLetters));
             }
         }
     }
