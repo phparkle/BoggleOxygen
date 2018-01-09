@@ -1,109 +1,92 @@
-import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
-import java.util.TreeSet;
 
 public class BoggleSolver {
+
+    private static final int[] SCORE = { 0, 0, 0, 1, 1, 2, 3, 5, 11 };
 
     private static final long PREFIX = 0b01;
     private static final long KEY    = 0b10;
 
-    private final FlatTST tst;
+    private final SuperTrie trie;
 
     public BoggleSolver(String[] dictionary) {
-        tst = new FlatTST(dictionary, 0, dictionary.length, 0);
+        trie = new SuperTrie(dictionary);
     }
 
-    public Iterable<String> getAllValidWords(BoggleBoard board) {
-        int rows = board.rows();
-        int cols = board.cols();
+    public Iterable<String> getAllValidWords(BoggleBoard board)
+    { return new WordFinder(board).getAllValidWords(); }
 
-        char[] letters = new char[rows * cols];
-        for (int i = 0; i < rows; ++i)
-            for (int j = 0; j < cols; ++j)
-                letters[i * cols + j] = board.getLetter(i, j);
+    private class WordFinder {
 
-        int[] g = new int[rows * cols << 3];
-        Arrays.fill(g, -1);
-        for (int i = 0; i < rows; ++i) {
-            for (int j = 0; j < cols; ++j) {
-                int k = i * cols + j << 3;
-                if (j + 1 < cols)
-                    g[k++] = i * cols + (j + 1);
-                if (i + 1 < rows && j + 1 < cols)
-                    g[k++] = (i + 1) * cols + (j + 1);
-                if (i + 1 < rows)
-                    g[k++] = (i + 1) * cols + j;
-                if (i + 1 < rows && j - 1 >= 0)
-                    g[k++] = (i + 1) * cols + (j - 1);
-                if (j - 1 >= 0)
-                    g[k++] = i * cols + (j - 1);
-                if (i - 1 >= 0 && j - 1 >= 0)
-                    g[k++] = (i - 1) * cols + (j - 1);
-                if (i - 1 >= 0)
-                    g[k++] = (i - 1) * cols + j;
-                if (i - 1 >= 0 && j + 1 < cols)
-                    g[k++] = (i - 1) * cols + (j + 1);
-            }
-        }
+        private final long[] tray;
+        private final boolean[] marked;
+        private final Set<String> words;
 
-        Set<String> words = new TreeSet<>();
-        for (int i = 0; i < rows * cols; ++i) {
-            boolean[] marked = new boolean[rows * cols];
-            int[] adj = new int[rows * cols];
-            IntStack path = new IntStack();
-            CharStack prefix = new CharStack();
-            marked[i] = true;
-            path.push(i);
-            if (letters[i] == 'Q')
-                prefix.push('U');
-            prefix.push(letters[i]);
-            while (!path.isEmpty()) {
-                int v = path.peek();
-                if (adj[v] < 8 && g[(v << 3) + adj[v]] != -1) {
-                    int w = g[(v << 3) + adj[v]++];
-                    if (!marked[w]) {
-                        if (letters[w] == 'Q')
-                            prefix.push('U');
-                        prefix.push(letters[w]);
-                        long query = tst.query(prefix, 0);
-                        if (query != 0) {
-                            if (query == (KEY | PREFIX))
-                                words.add(prefix.toString());
-                            marked[w] = true;
-                            path.push(w);
-                        } else if (prefix.pop() == 'Q') {
-                            prefix.pop();
+        private WordFinder(BoggleBoard board) {
+            int rows = board.rows();
+            int cols = board.cols();
+            tray = new long[rows * cols];
+            marked = new boolean[rows * cols];
+            for (int i = 0; i < rows; ++i) {
+                for (int j = 0; j < cols; ++j) {
+                    long slot = board.getLetter(i, j);
+                    for (int di = -1, k = 8; di < 2; ++di) {
+                        int ai = i + di;
+                        if (ai < 0 || ai >= rows)
+                            continue;
+                        for (int dj = -1; dj < 2; ++dj) {
+                            if (di == 0 && dj == 0)
+                                continue;
+                            int aj = j + dj;
+                            if (aj < 0 || aj >= cols)
+                                continue;
+                            slot |= (ai * cols + aj & 0x7fL) << k;
+                            k += 7;
                         }
                     }
-                } else {
-                    marked[v] = false;
-                    adj[v] = 0;
-                    if (prefix.pop() == 'Q')
-                        prefix.pop();
-                    path.pop();
+                    tray[i * cols + j] = slot;
                 }
             }
+            words = new HashSet<>();
+            CharStack prefix = new CharStack();
+            for (int v = 0; v < tray.length; ++v)
+                findWords(v, prefix);
         }
-        return words;
+
+        private void findWords(int v, CharStack prefix) {
+            marked[v] = true;
+            long slot = tray[v];
+            char c = (char) (slot & 0xff);
+            prefix.push(c);
+            if (c == 'Q')
+                prefix.push('U');
+            long query = trie.query(prefix);
+            if (query != 0) {
+                if (query == (KEY | PREFIX))
+                    words.add(prefix.string());
+                for (slot >>>= 8; slot != 0; slot >>>= 7) {
+                    int w = (int) slot & 0x7f;
+                    if (!marked[w])
+                        findWords(w, prefix);
+                }
+            }
+            marked[v] = false;
+            if (c == 'Q')
+                prefix.pop();
+            prefix.pop();
+        }
+
+        private Iterable<String> getAllValidWords()
+        { return words; }
+
     }
 
     public int scoreOf(String word) {
-        int length = word.length();
-        if (length > 2 && tst.query(word, 0) == 3) {
-            switch (length) {
-            case 3:
-            case 4:
-                return 1;
-            case 5:
-                return 2;
-            case 6:
-                return 3;
-            case 7:
-                return 5;
-            default:
-                return 11;
-            }
-        } else return 0;
+        int len = word.length();
+        if (len > 2 && trie.query(new CharStack(word)) == (KEY | PREFIX))
+            return SCORE[Math.min(len, 8)];
+        return 0;
     }
 
 }
