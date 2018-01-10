@@ -3,28 +3,9 @@ import java.util.NoSuchElementException;
 
 public class CharStack implements CharSequence {
 
-    private char[] value;
-    private int offset;
+    private char[] value = new char[8];
+    private int[] hash = new int[9];
     private int length;
-    private int hash;
-
-    public CharStack()
-    { value = new char[8]; }
-
-    public CharStack(CharStack other, int offset, int count) {
-        this.value = other.value;
-        this.offset = offset;
-        this.length = count;
-    }
-
-    public CharStack(String str)
-    { this(str, 0, str.length()); }
-
-    public CharStack(String str, int offset, int count) {
-        this.value = str.toCharArray();
-        this.offset = offset;
-        this.length = count;
-    }
 
     public boolean isEmpty()
     { return length == 0; }
@@ -33,28 +14,25 @@ public class CharStack implements CharSequence {
     { return length; }
 
     public void push(char c) {
-        if (offset + length == value.length)
-            value = Arrays.copyOf(value, value.length << 1);
-        value[offset + length++] = c;
-        hash = 0;
+        if (length == value.length) {
+            value = Arrays.copyOf(value, length << 1);
+            hash = Arrays.copyOf(hash, length << 1 | 1);
+        }
+        value[length++] = c;
+        hash[length] = 31 * hash[length - 1] + c;
     }
 
     public char pop() {
-        if (length != 0) {
-            hash = 0;
-            return value[offset + --length];
-        }
+        if (length != 0)
+            return value[--length];
         throw new NoSuchElementException();
     }
 
     public char peek() {
         if (length != 0)
-            return value[offset + length - 1];
+            return value[length - 1];
         throw new NoSuchElementException();
     }
-
-    public String string()
-    { return String.valueOf(value, offset, length); }
 
     @Override
     public int length()
@@ -63,47 +41,24 @@ public class CharStack implements CharSequence {
     @Override
     public char charAt(int index) {
         if (index < length)
-            return value[offset + index];
+            return value[index];
         throw new IndexOutOfBoundsException();
     }
 
     @Override
     public CharSequence subSequence(int start, int end)
-    { return new CharStack(this, start, end - start); }
+    { throw new UnsupportedOperationException(); }
 
     @Override
-    public int hashCode() {
-        int h = hash;
-        if (h == 0 && length > 0) {
-            for (int i = offset; i < offset + length; ++i)
-                h = 31 * h + value[i];
-            hash = h;
-        }
-        return h;
-    }
+    public int hashCode()
+    { return hash[length]; }
 
     @Override
-    public boolean equals(Object obj) {
-        if (obj == null)
-            return false;
-        if (obj == this)
-            return true;
-        if (obj.getClass() == this.getClass()) {
-            CharStack other = (CharStack) obj;
-            if (other.length == length) {
-                int i = other.offset;
-                int j = offset;
-                for (int n = length; n > 0; --n, ++i, ++j)
-                    if (other.value[i] != value[j])
-                        return false;
-                return true;
-            }
-        }
-        return false;
-    }
+    public boolean equals(Object obj)
+    { return ((String) obj).contentEquals(this); }
 
     @Override
     public String toString()
-    { return string(); }
+    { return String.valueOf(value, 0, length); }
 
 }
