@@ -54,8 +54,20 @@ public class CharStack implements CharSequence {
     { return hash[length]; }
 
     @Override
-    public boolean equals(Object obj)
-    { return ((String) obj).contentEquals(this); }
+    public boolean equals(Object obj) {
+        if (obj == null)
+            return false;
+        if (CharSequence.class.isInstance(obj)) {
+            CharSequence other = (CharSequence) obj;
+            if (length != other.length())
+                return false;
+            for (int i = 0; i < length; ++i)
+                if (value[i] != other.charAt(i))
+                    return false;
+            return true;
+        }
+        return false;
+    }
 
     @Override
     public String toString()

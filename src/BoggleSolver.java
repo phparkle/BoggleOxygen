@@ -10,29 +10,30 @@ public class BoggleSolver {
     private final Map<String, String> trie;
 
     public BoggleSolver(String[] dictionary) {
-        int w = 0;
-        for (int r = 0; r < dictionary.length; ++r) {
-            String word = dictionary[r];
+        trie = new HashMap<>(dictionary.length << 1);
+        for (int i = 0; i < dictionary.length; ++i) {
+            String word = dictionary[i];
             int len = word.length();
             if (len > 2 && word.charAt(len - 1) != 'Q') {
                 boolean isValid = true;
                 boolean hasQ = false;
-                for (int i = 0; isValid && i + 1 < len; ++i) {
-                    if (word.charAt(i) == 'Q') {
-                        isValid = word.charAt(++i) == 'U';
+                int j = 0;
+                while (isValid && j + 1 < len) {
+                    if (word.charAt(j) == 'Q') {
+                        isValid = word.charAt(++j) == 'U';
                         hasQ = true;
                     }
+                    ++j;
                 }
-                if (isValid)
-                    dictionary[w++] = !hasQ ? word : word.replace("QU", "Q");
+                if (isValid) {
+                    if (hasQ) {
+                        word = word.replace("QU", "Q");
+                        len = word.length();
+                    }
+                    for (int d = 0; d < len; ++d)
+                        trie.putIfAbsent(word.substring(0, d + 1), word);
+                }
             }
-        }
-        trie = new HashMap<>(w << 1);
-        for (int i = 0; i < w; ++i) {
-            String word = dictionary[i];
-            int len = word.length();
-            for (int d = 0; d < len; ++d)
-                trie.putIfAbsent(word.substring(0, d + 1), word);
         }
     }
 
@@ -41,7 +42,8 @@ public class BoggleSolver {
 
     public int scoreOf(String word) {
         int len = word.length();
-        if (len > 2)
+        word = word.replace("QU", "Q");
+        if (len > 2 && word.equals(trie.get(word)))
             return SCORE[Math.min(len, 8)];
         return 0;
     }
