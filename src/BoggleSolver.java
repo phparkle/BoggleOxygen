@@ -6,35 +6,38 @@ import java.util.Set;
 public class BoggleSolver {
 
     private static final int[] SCORE = { 0, 0, 0, 1, 1, 2, 3, 5, 11 };
+    private static final String EMPTY = "";
 
-    private final Map<String, String> trie;
+    private final Map<CharStack, String> trie;
 
     public BoggleSolver(String[] dictionary) {
-        trie = new HashMap<>(dictionary.length << 1);
+        trie = new HashMap<>(dictionary.length << 4);
         for (int i = 0; i < dictionary.length; ++i) {
             String word = dictionary[i];
-            int len = word.length();
-            if (len > 2 && word.charAt(len - 1) != 'Q') {
-                boolean isValid = true;
-                boolean hasQ = false;
-                int j = 0;
-                while (isValid && j + 1 < len) {
-                    if (word.charAt(j) == 'Q') {
-                        isValid = word.charAt(++j) == 'U';
-                        hasQ = true;
-                    }
-                    ++j;
+            if (isValid(word)) {
+                CharStack key = new CharStack();
+                int len = word.length();
+                int d = 0;
+                while (d < len) {
+                    char c = word.charAt(d);
+                    key.push(c);
+                    trie.putIfAbsent(new CharStack(key), EMPTY);
+                    d += c == 'Q' ? 2 : 1;
                 }
-                if (isValid) {
-                    if (hasQ) {
-                        word = word.replace("QU", "Q");
-                        len = word.length();
-                    }
-                    for (int d = 0; d < len; ++d)
-                        trie.putIfAbsent(word.substring(0, d + 1), word);
-                }
+                trie.put(key, word);
             }
         }
+        assert Boolean.TRUE;
+    }
+
+    private boolean isValid(String word) {
+        int len = word.length();
+        boolean isValid = len > 2 && word.charAt(len - 1) != 'Q';
+        int i = 0;
+        while (isValid && i + 1 < len)
+            if (word.charAt(i++) == 'Q')
+                isValid = word.charAt(i++) == 'U';
+        return isValid;
     }
 
     public Iterable<String> getAllValidWords(BoggleBoard board)
@@ -42,17 +45,27 @@ public class BoggleSolver {
 
     public int scoreOf(String word) {
         int len = word.length();
-        word = word.replace("QU", "Q");
-        if (len > 2 && word.equals(trie.get(word)))
+        if (len > 2 && trie.getOrDefault(key(word), EMPTY) != EMPTY)
             return SCORE[Math.min(len, 8)];
         return 0;
+    }
+
+    private CharStack key(String word) {
+        CharStack key = new CharStack();
+        int len = word.length();
+        int d = 0;
+        while (d < len) {
+            char c = word.charAt(d);
+            key.push(c);
+            d += c == 'Q' ? 2 : 1;
+        }
+        return key;
     }
 
     private class WordFinder {
 
         private final long[] tray;
         private final Set<String> words;
-        private final CharStack prefix;
 
         private WordFinder(BoggleBoard board) {
             int rows = board.rows();
@@ -79,30 +92,26 @@ public class BoggleSolver {
                 }
             }
             words = new HashSet<>();
-            prefix = new CharStack();
             for (int v = 0; v < tray.length; ++v)
-                findWords(v, false);
+                findWords(v, new CharStack());
         }
 
-        private void findWords(int v, boolean hasQ) {
+        private void findWords(int v, CharStack prefix) {
             long slot = tray[v];
             char c = (char) (slot & 0x7f);
-            if (c == 'Q')
-                hasQ = true;
             tray[v] |= 1L << 7;
             prefix.push(c);
-            String word = trie.get(prefix);
-            if (word != null) {
-                if (word.length() == prefix.length())
-                    words.add(!hasQ ? word : word.replace("Q", "QU"));
+            String value = trie.get(prefix);
+            if (value != null) {
+                if (value != EMPTY)
+                    words.add(value);
                 for (slot >>>= 8; slot != 0; slot >>>= 7) {
                     int w = (int) slot & 0x7f;
                     if ((tray[w] & 1L << 7) == 0)
-                        findWords(w, hasQ);
+                        findWords(w, new CharStack(prefix));
                 }
             }
             tray[v] &= ~(1L << 7);
-            prefix.pop();
         }
 
         private Iterable<String> getAllValidWords()

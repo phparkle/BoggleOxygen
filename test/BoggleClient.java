@@ -17,3 +17,11 @@ public class BoggleClient {
     }
 
 }
+
+//int count = 0;
+//final long start = System.nanoTime();
+//while (System.nanoTime() - start < 5L*1000L*1000L*1000L) {
+//    solver.getAllValidWords(new BoggleBoard());
+//    ++count;
+//}
+//StdOut.println(count);

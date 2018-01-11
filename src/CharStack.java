@@ -3,9 +3,24 @@ import java.util.NoSuchElementException;
 
 public class CharStack implements CharSequence {
 
-    private char[] value = new char[8];
-    private int[] hash = new int[9];
+    private char[] value;
     private int length;
+    private int hash;
+
+    public CharStack()
+    { value = new char[8]; }
+
+    public CharStack(CharStack other) {
+        value = other.value;
+        length = other.length;
+        hash = other.hash;
+    }
+
+    public CharStack(String other) {
+        value = other.toCharArray();
+        length = other.length();
+        hash = other.hashCode();
+    }
 
     public boolean isEmpty()
     { return length == 0; }
@@ -14,12 +29,10 @@ public class CharStack implements CharSequence {
     { return length; }
 
     public void push(char c) {
-        if (length == value.length) {
+        if (length == value.length)
             value = Arrays.copyOf(value, length << 1);
-            hash = Arrays.copyOf(hash, length << 1 | 1);
-        }
         value[length++] = c;
-        hash[length] = 31 * hash[length - 1] + c;
+        hash = 31 * hash + c;
     }
 
     public char pop() {
@@ -33,6 +46,9 @@ public class CharStack implements CharSequence {
             return value[length - 1];
         throw new NoSuchElementException();
     }
+
+    public void clear()
+    { length = 0; }
 
     @Override
     public int length()
@@ -51,18 +67,18 @@ public class CharStack implements CharSequence {
 
     @Override
     public int hashCode()
-    { return hash[length]; }
+    { return hash; }
 
     @Override
     public boolean equals(Object obj) {
         if (obj == null)
             return false;
-        if (CharSequence.class.isInstance(obj)) {
-            CharSequence other = (CharSequence) obj;
-            if (length != other.length())
+        if (obj.getClass() == this.getClass()) {
+            CharStack other = (CharStack) obj;
+            if (length != other.length)
                 return false;
             for (int i = 0; i < length; ++i)
-                if (value[i] != other.charAt(i))
+                if (value[i] != other.value[i])
                     return false;
             return true;
         }
